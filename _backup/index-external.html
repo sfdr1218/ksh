@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#ffffff" />
+<title>可视化接地</title>
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" />
+<style>
+  :root {
+    --text: #1a1a1a;
+    --row-border: #e6e6e6;
+    --row-border-hover: #d2d2d2;
+    --chevron: #c8c8c8;
+    --row-bg: #ffffff;
+    --active-bg: #f7f7f7;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: "Noto Sans SC", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #ffffff;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ===== 页面骨架 ===== */
+  .page {
+    min-height: 100%;
+    max-width: 520px;
+    margin: 0 auto;
+    padding:
+      calc(env(safe-area-inset-top, 0px) + max(4.5vh, 34px))
+      24px
+      calc(env(safe-area-inset-bottom, 0px) + 36px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .page-title {
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0.02em;
+    text-align: center;
+  }
+
+  .menu {
+    width: 100%;
+    margin-top: 12vh;
+    display: flex;
+    flex-direction: column;
+    gap: 12vh;
+  }
+
+  /* ===== 菜单项 ===== */
+  .menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 84px;
+    padding: 0 26px;
+    background: var(--row-bg);
+    border: 1px solid var(--row-border);
+    border-radius: 16px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 19px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
+  }
+
+  .menu-item .label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .menu-item .chevron {
+    flex: none;
+    margin-left: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .menu-item:hover {
+    border-color: var(--row-border-hover);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .menu-item:active {
+    background: var(--active-bg);
+    transform: scale(0.985);
+  }
+
+  .menu-item:focus-visible {
+    outline: 2px solid rgba(0, 0, 0, 0.4);
+    outline-offset: 2px;
+  }
+
+  /* ===== 轻提示 ===== */
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
+    transform: translate(-50%, 12px);
+    padding: 12px 22px;
+    background: rgba(26, 26, 26, 0.92);
+    color: #ffffff;
+    font-size: 14px;
+    line-height: 1.4;
+    border-radius: 999px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 80;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+
+  /* ===== 视频播放层 ===== */
+  .player-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+    z-index: 60;
+  }
+
+  .player-overlay.open {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .player-overlay video {
+    width: 100%;
+    max-width: 560px;
+    max-height: 76vh;
+    background: #000000;
+    border-radius: 8px;
+    outline: none;
+  }
+
+  .player-close {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 12px);
+    right: calc(env(safe-area-inset-right, 0px) + 12px);
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.12);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.18s ease;
+  }
+
+  .player-close:hover {
+    background: rgba(255, 255, 255, 0.24);
+  }
+
+  .player-close:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.8);
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+  <main class="page">
+    <h1 class="page-title">可视化接地</h1>
+
+    <nav class="menu" aria-label="培训资料">
+      <!-- 第一项：培训参考资料（PDF） -->
+      <a class="menu-item" href="https://aka.doubaocdn.com/s/UohT6WtB04" target="_blank" rel="noopener">
+        <span class="label">可视化接地装置培训参考资料</span>
+        <span class="chevron" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#c8c8c8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+
+      <!-- 第二项：培训视频（视频到位后填入 CONFIG.videoUrl 即可播放） -->
+      <a class="menu-item" id="video-row" role="button" tabindex="0" aria-haspopup="dialog">
+        <span class="label">可视化接地装置培训视频</span>
+        <span class="chevron" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#c8c8c8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+        </span>
+      </a>
+    </nav>
+  </main>
+
+  <!-- 视频播放层 -->
+  <div class="player-overlay" id="player-overlay" role="dialog" aria-modal="true" aria-label="培训视频播放">
+    <video id="player-video" controls playsinline preload="metadata"></video>
+    <button class="player-close" id="player-close" aria-label="关闭视频">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    // ===== 站点配置：后续替换这里的链接即可 =====
+    var CONFIG = {
+      pdfUrl: "https://aka.doubaocdn.com/s/UohT6WtB04", // 培训参考资料 PDF
+      videoUrl: "https://aka.doubaocdn.com/s/Ggzh3UYBs5" // 培训视频
+    };
+
+    var videoRow = document.getElementById("video-row");
+    var overlay = document.getElementById("player-overlay");
+    var player = document.getElementById("player-video");
+    var closeBtn = document.getElementById("player-close");
+    var toastEl = document.getElementById("toast");
+    var toastTimer = null;
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        toastEl.classList.remove("show");
+      }, 2200);
+    }
+
+    function openPlayer() {
+      player.src = CONFIG.videoUrl;
+      overlay.classList.add("open");
+      document.body.style.overflow = "hidden";
+      player.play().catch(function () { /* 浏览器拦截自动播放时由用户手动点击播放 */ });
+    }
+
+    function closePlayer() {
+      player.pause();
+      player.removeAttribute("src");
+      player.load();
+      overlay.classList.remove("open");
+      document.body.style.overflow = "";
+    }
+
+    function onVideoRowClick() {
+      if (!CONFIG.videoUrl) {
+        showToast("培训视频正在准备中，敬请期待");
+        return;
+      }
+      openPlayer();
+    }
+
+    videoRow.addEventListener("click", function (e) {
+      e.preventDefault();
+      onVideoRowClick();
+    });
+
+    videoRow.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onVideoRowClick();
+      }
+    });
+
+    closeBtn.addEventListener("click", closePlayer);
+
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && overlay.classList.contains("open")) {
+        closePlayer();
+      }
+    });
+
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay) {
+        closePlayer();
+      }
+    });
+  </script>
+</body>
+</html>
